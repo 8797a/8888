@@ -38,6 +38,8 @@ class DesktopLanguageBuildTest(unittest.TestCase):
         self.assertEqual(262144, int(fields[2]))
 
     def test_the_workflow_ships_the_index_and_the_packs(self):
+        if not WORKFLOW.exists():
+            self.skipTest('this fork does not build the desktop package in CI')
         workflow = read(WORKFLOW)
         self.assertIn('out/desktop-kde.i18n.txt', workflow)
         self.assertEqual(1, len([line for line in workflow.splitlines()

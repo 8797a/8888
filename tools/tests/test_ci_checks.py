@@ -90,6 +90,8 @@ class CiChecksTest(unittest.TestCase):
                     env=dict(os.environ, BUILD_RESULT=build, PYTHON_RESULT=python),
                     capture_output=True)
                 self.assertEqual(result.returncode == 0, build == python == 'success')
-        for publisher in ('sign', 'packs'):
+        # A fork can build without the publishing jobs; verify the ones that exist.
+        publishers = [name for name in ('sign', 'packs') if name in jobs]
+        for publisher in publishers:
             self.assertIn('checks', jobs[publisher]['needs'])
 
