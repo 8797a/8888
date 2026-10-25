@@ -34,6 +34,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.droiddeck.launcher.core.PhantomProcessLimit
@@ -130,7 +132,7 @@ private fun FixGroup(
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             when {
-                pairing -> PairingProgress(stage, onCancel)
+                pairing -> PairingProgress(stage, compact, onCancel)
                 hasToggle -> {
                     Body(stringResource(R.string.gate_toggle_steps))
                     PrimaryButton(stringResource(R.string.gate_open_dev), compact = compact, onClick = onOpenDeveloperOptions)
@@ -160,7 +162,9 @@ private fun FixGroup(
 }
 
 @Composable
-private fun PairingProgress(stage: Stage, onCancel: () -> Unit) {
+private fun PairingProgress(stage: Stage, compact: Boolean, onCancel: () -> Unit) {
+    val context = LocalContext.current
+    var code by rememberSaveable { mutableStateOf("") }
     val steps = listOf(
         stringResource(R.string.gate_step1),
         stringResource(R.string.gate_step2),
@@ -195,6 +199,31 @@ private fun PairingProgress(stage: Stage, onCancel: () -> Unit) {
             modifier = Modifier.weight(1f),
         )
         SecondaryButton(stringResource(R.string.common_cancel), compact = true, onClick = onCancel)
+    }
+    if (stage is Stage.CodeNeeded) {
+        Row(
+            verticalAlignment = Alignment.Bottom,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.fillMaxWidth(),
+        ) {
+            AdbTextField(
+                value = code,
+                onValueChange = { code = it.filter(Char::isDigit).take(6) },
+                label = stringResource(R.string.wadb_pin),
+                placeholder = stringResource(R.string.wadb_pin_placeholder),
+                keyboardType = KeyboardType.Number,
+                imeAction = ImeAction.Done,
+                compact = compact,
+                onDone = { if (code.length == 6) WirelessAdbPairingService.submitCode(context, code) },
+                modifier = Modifier.weight(1f),
+            )
+            PrimaryButton(
+                stringResource(R.string.wadb_pair),
+                compact = compact,
+                enabled = code.length == 6,
+                onClick = { WirelessAdbPairingService.submitCode(context, code) },
+            )
+        }
     }
 }
 
