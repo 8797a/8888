@@ -143,7 +143,7 @@ private fun rememberMarkClock(avoid: Rect?): MarkClock {
 }
 
 private class MarkFrame(size: Size, val centre: Offset) {
-    val height = min(size.height * 0.3f, size.width * 0.28f * LogoShape.HEIGHT / LogoShape.WIDTH)
+    val height = min(size.height * 0.42f, size.width * 0.36f)
     val s = height / LogoShape.HEIGHT
     val halfWidth = height / 2
     val halfHeight = height / 2
@@ -300,6 +300,18 @@ private fun Mark(clock: MarkClock) {
                 val drop = Out.transform(clamp01((t - POP_FROM) / 700f))
                 val side = f.height
                 translate(0f, mix(26f, 0f, drop) * k) {
+                    // the mark's own shadow, so it still sits on the wall instead of floating flat
+                    val sc = f.centre + Offset(0f, side * 0.36f)
+                    val sr = side * 0.62f
+                    drawCircle(
+                        Brush.radialGradient(
+                            0f to Color.Black.copy(alpha = 0.5f * appear),
+                            0.5f to Color.Black.copy(alpha = 0.28f * appear),
+                            1f to Color.Transparent,
+                            center = sc, radius = sr,
+                        ),
+                        sr, sc,
+                    )
                     scale(mix(0.88f, 1f, drop), mix(0.88f, 1f, drop), f.centre) {
                         drawImage(
                             logo,
