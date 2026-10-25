@@ -3,6 +3,7 @@ package com.droiddeck.launcher.core
 import android.content.Context
 import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
+import android.provider.Settings
 import com.droiddeck.launcher.R
 import com.flyfishxu.kadb.Kadb
 import com.flyfishxu.kadb.cert.KadbCert
@@ -21,6 +22,7 @@ object WirelessAdbFix {
     private const val KEY_FILE = "wireless-adb-key.pem"
     private const val HOST_FILE = "wireless-adb-host.txt"
     private const val CONNECTION_FILE = "wireless-adb-connection.txt"
+    private const val SECURE_SETTINGS = "android.permission.WRITE_SECURE_SETTINGS"
     const val LOOPBACK = "127.0.0.1"
 
     private data class SavedConnection(val host: String, val port: Int?)
@@ -165,27 +167,35 @@ object WirelessAdbFix {
         return resolvedPort.get().takeIf { it in 1..65535 }
     }
 
+    // Xiaomi/HyperOS refuse settings writes over ADB and answer with a settings
+    // SecurityException full of stack frames, so match the permission, not the trace.
+    private fun refused(output: String): Boolean =
+        output.contains("WRITE_SECURE_SETTINGS") || output.contains("SecurityException")
+
     fun setChildProcessLimit(context: Context, host: String, port: Int, enabled: Boolean) {
         loadOrCreateIdentity(context.applicationContext)
-        // Xiaomi/HyperOS refuse these writes over ADB until "USB debugging (Security settings)"
-        // is on, and report it as a settings SecurityException with a Java stack trace.
-        val denied = { output: String ->
-            if (output.contains("WRITE_SECURE_SETTINGS") || output.contains("SecurityException"))
-                context.getString(R.string.adbfix_secure_settings_blocked)
-            else null
-        }
         Kadb.create(host, port).use { adb ->
-            PhantomProcessLimit.shellCommands(enabled).forEach { command ->
+            var shellRefused = false
+            for (command in PhantomProcessLimit.shellCommands(enabled)) {
                 val change = adb.shell(command)
-                check(change.exitCode == 0) {
-                    denied(change.allOutput) ?: change.allOutput.ifBlank {
-                        context.getString(R.string.adbfix_command_failed, change.exitCode)
-                    }
-                }
+                if (change.exitCode == 0) continue
+                if (refused(change.allOutput)) { shellRefused = true; break }
+                error(change.allOutput.ifBlank { context.getString(R.string.adbfix_command_failed, change.exitCode) })
+            }
+            if (shellRefused) {
+                // The shell user cannot write settings on some ROMs. WRITE_SECURE_SETTINGS is a
+                // development permission, so grant it to the app over the paired connection and
+                // write the setting from this process instead.
+                adb.shell("pm grant ${context.packageName} $SECURE_SETTINGS")
+                val value = if (enabled) "true" else "false"
+                runCatching {
+                    Settings.Global.putString(context.contentResolver, PhantomProcessLimit.SETTING, value)
+                }.getOrElse { error(context.getString(R.string.adbfix_secure_settings_blocked)) }
             }
             val result = adb.shell(PhantomProcessLimit.verifyCommand())
             check(result.exitCode == 0 && PhantomProcessLimit.verified(result.output, enabled)) {
-                denied(result.allOutput) ?: context.getString(R.string.adbfix_not_confirmed, result.allOutput.trim())
+                if (refused(result.allOutput)) context.getString(R.string.adbfix_secure_settings_blocked)
+                else context.getString(R.string.adbfix_not_confirmed, result.allOutput.trim())
             }
         }
         if (PhantomProcessLimit.usesDeviceConfig()) PhantomProcessLimit.rememberAndroid12(context, !enabled)

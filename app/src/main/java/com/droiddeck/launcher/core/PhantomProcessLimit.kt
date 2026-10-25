@@ -14,7 +14,7 @@ enum class PhantomProcessStatus {
 }
 
 object PhantomProcessLimit {
-    private const val SETTING = "settings_enable_monitor_phantom_procs"
+    internal const val SETTING = "settings_enable_monitor_phantom_procs"
 
     private const val MAX_PHANTOM = "2147483647"
     private const val PREFS = "phantom-process-limit"
