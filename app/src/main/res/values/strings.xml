@@ -1788,6 +1788,9 @@
 
     <string name="adbfix_save_failed">Could not save Wireless debugging identity</string>
     <string name="adbfix_command_failed">ADB command failed (%1$d)</string>
+    <string name="adbfix_pair_link_lost">The pairing connection closed. Open "Pair device with pairing code" again and enter the new address, port and code straight away; the port stops working once that dialog closes.</string>
+    <string name="adbfix_connect_refused">Nothing is listening on that port. The wireless debugging port changes every time it is switched on, so read the current "IP address and port" on the Wireless debugging screen and enter it right away, or try 127.0.0.1:<port>.</string>
+    <string name="adbfix_grant_failed">Could not grant the settings permission: %1$s</string>
     <string name="adbfix_secure_settings_blocked">This device blocks settings changes over ADB. On Xiaomi/HyperOS, turn on "USB debugging (Security settings)" in Developer options, then retry.</string>
     <string name="adbfix_not_confirmed">Android did not confirm the child-process limit was changed: %1$s</string>
     <string name="adbfix_no_pairing">No Wireless debugging pairing is saved</string>

@@ -1770,6 +1770,9 @@
 
     <string name="adbfix_save_failed">无法保存无线调试身份信息</string>
     <string name="adbfix_command_failed">ADB 命令执行失败（%1$d）</string>
+    <string name="adbfix_pair_link_lost">配对连接已关闭。请重新打开「使用配对码配对设备」弹窗，用新的 IP 地址、端口和配对码立刻重试——弹窗一关，端口就失效。</string>
+    <string name="adbfix_connect_refused">连不上这个端口（Connection refused）。无线调试每次重新打开端口都会变，请读「无线调试」页面当前的「IP 地址和端口」立刻填入；也可以试试 127.0.0.1:端口。</string>
+    <string name="adbfix_grant_failed">无法授予修改系统设置的权限：%1$s</string>
     <string name="adbfix_secure_settings_blocked">这台设备禁止通过 ADB 修改系统设置（小米/HyperOS 常见）。请在开发者选项里打开「USB 调试（安全设置）」后再重试。</string>
     <string name="adbfix_not_confirmed">Android 未确认子进程限制已更改：%1$s</string>
     <string name="adbfix_no_pairing">未保存任何无线调试配对</string>

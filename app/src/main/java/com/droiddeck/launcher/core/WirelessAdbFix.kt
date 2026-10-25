@@ -172,7 +172,50 @@ object WirelessAdbFix {
     private fun refused(output: String): Boolean =
         output.contains("WRITE_SECURE_SETTINGS") || output.contains("SecurityException")
 
+    /**
+     * The pairing port only lives while the system's "Pair device with pairing code"
+     * dialog is open, so a closed, refused or timed-out connection means a stale dialog
+     * rather than a wrong code. Say that instead of the library's "connection closed".
+     */
+    fun describePairFailure(context: Context, failure: Throwable): String {
+        val text = failure.localizedMessage.orEmpty()
+        val stale = listOf("closed", "reset", "refused", "timeout", "timed out", "unreachable")
+            .any { text.contains(it, ignoreCase = true) }
+        return if (stale || text.isBlank()) context.getString(R.string.adbfix_pair_link_lost) else text
+    }
+
+    private fun connectRefused(failure: Throwable): Boolean {
+        val text = failure.localizedMessage.orEmpty()
+        return text.contains("ECONNREFUSED", ignoreCase = true) ||
+            text.contains("Connection refused", ignoreCase = true)
+    }
+
     fun setChildProcessLimit(context: Context, host: String, port: Int, enabled: Boolean) {
+        // The wireless debugging port changes whenever the setting is switched on again, and
+        // some ROMs only answer on loopback, so a refused connect to the LAN address is retried
+        // through 127.0.0.1 before the failure reaches the screen.
+        var workingHost = host
+        val first = runCatching { applyLimit(context, host, port, enabled) }
+        val outcome = if (first.isFailure && host != LOOPBACK &&
+            connectRefused(first.exceptionOrNull() ?: RuntimeException())
+        ) {
+            workingHost = LOOPBACK
+            runCatching { applyLimit(context, LOOPBACK, port, enabled) }
+        } else {
+            first
+        }
+        outcome.getOrElse { failure ->
+            throw if (connectRefused(failure)) {
+                IllegalStateException(context.getString(R.string.adbfix_connect_refused), failure)
+            } else {
+                failure
+            }
+        }
+        if (PhantomProcessLimit.usesDeviceConfig()) PhantomProcessLimit.rememberAndroid12(context, !enabled)
+        saveConnection(context, workingHost, port)
+    }
+
+    private fun applyLimit(context: Context, host: String, port: Int, enabled: Boolean) {
         loadOrCreateIdentity(context.applicationContext)
         Kadb.create(host, port).use { adb ->
             var shellRefused = false
@@ -186,7 +229,10 @@ object WirelessAdbFix {
                 // The shell user cannot write settings on some ROMs. WRITE_SECURE_SETTINGS is a
                 // development permission, so grant it to the app over the paired connection and
                 // write the setting from this process instead.
-                adb.shell("pm grant ${context.packageName} $SECURE_SETTINGS")
+                val grant = adb.shell("pm grant ${context.packageName} $SECURE_SETTINGS")
+                if (grant.exitCode != 0) {
+                    error(context.getString(R.string.adbfix_grant_failed, grant.allOutput.trim()))
+                }
                 val value = if (enabled) "true" else "false"
                 runCatching {
                     Settings.Global.putString(context.contentResolver, PhantomProcessLimit.SETTING, value)
@@ -198,8 +244,6 @@ object WirelessAdbFix {
                 else context.getString(R.string.adbfix_not_confirmed, result.allOutput.trim())
             }
         }
-        if (PhantomProcessLimit.usesDeviceConfig()) PhantomProcessLimit.rememberAndroid12(context, !enabled)
-        saveConnection(context, host, port)
     }
 
     fun setUsingSavedPairing(context: Context, enabled: Boolean) {

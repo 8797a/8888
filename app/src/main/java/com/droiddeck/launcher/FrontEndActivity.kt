@@ -1046,7 +1046,10 @@ class FrontEndActivity : ComponentActivity() {
                                 val result = runCatching {
                                     kotlinx.coroutines.runBlocking { WirelessAdbFix.pair(this@FrontEndActivity, host, port, code) }
                                 }
-                                val error = result.exceptionOrNull()?.let { it.localizedMessage ?: getString(R.string.main_wadb_pair_failed) }
+                                val error = result.exceptionOrNull()?.let {
+                                    WirelessAdbFix.describePairFailure(this@FrontEndActivity, it)
+                                        .ifBlank { getString(R.string.main_wadb_pair_failed) }
+                                }
                                 ui.post { complete(error) }
                             }, "wireless-adb-pair").start()
                         },

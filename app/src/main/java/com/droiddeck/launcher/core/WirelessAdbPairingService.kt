@@ -118,10 +118,12 @@ class WirelessAdbPairingService : Service() {
         Thread({
             val paired = runCatching { kotlinx.coroutines.runBlocking { WirelessAdbFix.pair(this@WirelessAdbPairingService, WirelessAdbFix.LOOPBACK, port, code) } }
             if (paired.isFailure) {
+                val reason = WirelessAdbFix.describePairFailure(
+                    this@WirelessAdbPairingService, paired.exceptionOrNull() ?: RuntimeException())
                 main.post {
                     working = false
                     pairingPort = null
-                    show(Stage.CodeNeeded(getString(R.string.adbpair_code_rejected)))
+                    show(Stage.CodeNeeded(reason))
                 }
                 return@Thread
             }
