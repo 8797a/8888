@@ -1,5 +1,6 @@
 package com.droiddeck.launcher.ui
 
+import com.droiddeck.launcher.R
 import androidx.compose.animation.core.CubicBezierEasing
 import androidx.compose.animation.core.Easing
 import androidx.compose.foundation.Canvas
@@ -36,6 +37,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
+import androidx.compose.ui.res.imageResource
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import kotlin.math.PI
 import kotlin.math.abs
@@ -43,6 +47,7 @@ import kotlin.math.cos
 import kotlin.math.hypot
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 import kotlin.math.sin
 
 @Composable
@@ -138,8 +143,8 @@ private fun rememberMarkClock(avoid: Rect?): MarkClock {
 private class MarkFrame(size: Size, val centre: Offset) {
     val height = min(size.height * 0.3f, size.width * 0.28f * LogoShape.HEIGHT / LogoShape.WIDTH)
     val s = height / LogoShape.HEIGHT
-    val halfWidth = (LogoShape.CX - LogoShape.LEFT) * s
-    val halfHeight = LogoShape.CY * s
+    val halfWidth = height / 2
+    val halfHeight = height / 2
     val ball = LogoShape.BALL * s
     val k = height / 460f
     val ringFrom = ball
@@ -252,20 +257,13 @@ private fun EmptyWall(clock: MarkClock) {
 @Composable
 private fun Mark(clock: MarkClock) {
     val pal = LocalPalette.current
-    val ink = MaterialTheme.colorScheme.onBackground
-    val bg = pal.background
-    val slabEdge = lerp(bg, ink, 0.4f)
-    val rim = lerp(bg, pal.signal, 0.55f)
-    val left = remember { Path() }
-    val right = remember { Path() }
-    val piece = remember { Path() }
-    val measure = remember { PathMeasure() }
+    val logo = imageResource(R.drawable.logo)
     Canvas(
         Modifier.fillMaxSize().pointerInput(clock) {
             detectTapGestures { o ->
                 if (clock.at == Offset.Unspecified || Motion.scale == 0f) return@detectTapGestures
                 val f = MarkFrame(Size(size.width.toFloat(), size.height.toFloat()), clock.at)
-                if ((o - clock.at).getDistance() <= f.ball * 1.4f) clock.poke()
+                if ((o - clock.at).getDistance() <= f.height * 0.55f) clock.poke()
             }
         },
     ) {
@@ -279,7 +277,7 @@ private fun Mark(clock: MarkClock) {
             val p = (t - IMPACT) / RIPPLE_MS
             val alpha = if (p < 0.7f) mix(0.9f, 0.35f, p / 0.7f) else mix(0.35f, 0f, (p - 0.7f) / 0.3f)
             drawCircle(
-                pal.signal.copy(alpha = alpha), mix(f.ringFrom, f.ringTo, RippleEase.transform(p)), clock.slam,
+                pal.signal.copy(alpha = alpha), mix(f.height * 0.5f, f.ringTo, RippleEase.transform(p)), clock.slam,
                 style = Stroke(max(2.5f * k, 1.5.dp.toPx())),
             )
         }
@@ -294,93 +292,26 @@ private fun Mark(clock: MarkClock) {
         } else 0f
 
         translate(0f, shake) {
-            val fill = Out.transform(clamp01((intro - FILL_FROM) / 450f))
-            if (fill > 0f) {
-                val lift = 8f * k * (1f - fill)
-                val edge = 5f * f.s
-                LogoShape.left(left, 0f) { x, y -> f.px(x, y) + Offset(0f, lift + edge) }
-                LogoShape.right(right) { x, y -> f.px(x, y) + Offset(0f, lift + edge) }
-                drawPath(left, slabEdge.copy(alpha = fill))
-                drawPath(right, slabEdge.copy(alpha = fill))
-                LogoShape.left(left, 0f) { x, y -> f.px(x, y) + Offset(0f, lift) }
-                LogoShape.right(right) { x, y -> f.px(x, y) + Offset(0f, lift) }
-                drawPath(left, ink.copy(alpha = fill))
-                drawPath(right, ink.copy(alpha = fill))
-            }
-
-            if (intro < TRACE_MS) {
-                val drawn = TraceEase.transform(clamp01(intro / 775f))
-                val alpha = if (intro < 775f) 1f else 1f - (intro - 775f) / 475f
-                LogoShape.left(left, 0f, f::px)
-                LogoShape.right(right, f::px)
-                for (half in listOf(left, right)) {
-                    measure.setPath(half, false)
-                    piece.reset()
-                    measure.getSegment(0f, measure.length * drawn, piece, true)
-                    drawPath(piece, pal.signal.copy(alpha = alpha), style = Stroke(2f * f.s))
-                }
-            }
-
-            val shown = Out.transform(clamp01((intro - 650f) / 300f))
-            if (shown > 0f) {
-                val p = (t - POP_FROM) / (IMPACT - POP_FROM)
-                val (pop, rise) = when {
-                    p <= 0f || p >= 1f -> 1f to 0f
-                    p < 0.11f -> span(p, 0f, 0.11f, 1f, 0.92f, InOut) to span(p, 0f, 0.11f, 0f, 7f, InOut)
-                    p < 0.31f -> span(p, 0.11f, 0.31f, 0.92f, 1.6f, PopEase) to span(p, 0.11f, 0.31f, 7f, -42f, PopEase)
-                    p < 0.88f -> span(p, 0.31f, 0.88f, 1.6f, 1.54f, InOut) to span(p, 0.31f, 0.88f, -42f, -34f, InOut)
-                    else -> span(p, 0.88f, 1f, 1.54f, 1f, DropEase) to span(p, 0.88f, 1f, -34f, 0f, DropEase)
-                }
-                val q = clamp01((pop - 1f) / 0.6f)
-                val bob = if (t > END) -4f * k * (0.5f - 0.5f * cos(2f * PI.toFloat() * (t - END) / 5200f)) else 0f
-
-                val blur = mix(10f, 28f, q) * k
-                val sr = f.ball * 0.93f * mix(1f, 1.4f, q)
-                val dark = Color.Black.copy(alpha = mix(0.6f, 0.25f, q) * shown)
-                val sc = f.centre + Offset(20f * k * q, 48f * k * q)
-                drawCircle(
-                    Brush.radialGradient(
-                        0f to dark, (sr - blur).coerceAtLeast(0f) / (sr + blur) to dark, 1f to Color.Transparent,
-                        center = sc, radius = sr + blur,
-                    ),
-                    sr + blur, sc,
-                )
-
-                val sq = if (t in IMPACT..IMPACT + 280f) {
-                    val s = (t - IMPACT) / 280f
-                    when {
-                        s < 0.3f -> span(s, 0f, 0.3f, 1f, 1.1f, Out) to span(s, 0f, 0.3f, 1f, 0.88f, Out)
-                        s < 0.65f -> span(s, 0.3f, 0.65f, 1.1f, 0.97f, Out) to span(s, 0.3f, 0.65f, 0.88f, 1.04f, Out)
-                        else -> span(s, 0.65f, 1f, 0.97f, 1f, Out) to span(s, 0.65f, 1f, 1.04f, 1f, Out)
-                    }
-                } else 1f to 1f
-                val grow = mix(0.6f, 1f, shown) * pop
-                val turn = 720f * FlipEase.transform(clamp01((t - 1290f) / 760f))
-                translate(0f, rise * k + bob) {
-                    scale(grow * sq.first, grow * sq.second, f.centre) {
-                        coin(f.centre, f.ball, f.ball * 2f * 0.061f, turn, pal.signal.copy(alpha = shown), rim.copy(alpha = shown))
+            val appear = Out.transform(clamp01((intro - FILL_FROM) / 500f))
+            if (appear > 0f) {
+                val drop = Out.transform(clamp01((t - POP_FROM) / 700f))
+                val side = f.height
+                translate(0f, mix(26f, 0f, drop) * k) {
+                    scale(mix(0.88f, 1f, drop), mix(0.88f, 1f, drop), f.centre) {
+                        drawImage(
+                            logo,
+                            dstOffset = IntOffset((f.centre.x - side / 2).roundToInt(), (f.centre.y - side / 2).roundToInt()),
+                            dstSize = IntSize(side.roundToInt(), side.roundToInt()),
+                            alpha = appear,
+                        )
                     }
                 }
             }
 
             if (t in IMPACT..IMPACT + 420f) {
                 val p = Out.transform((t - IMPACT) / 420f)
-                drawCircle(pal.signal.copy(alpha = 1f - p), (f.ball + 6f * k) * mix(1f, 1.4f, p), f.centre, style = Stroke(max(4f * k, 2.dp.toPx())))
+                drawCircle(pal.signal.copy(alpha = 1f - p), (f.height * 0.5f + 6f * k) * mix(1f, 1.4f, p), f.centre, style = Stroke(max(4f * k, 2.dp.toPx())))
             }
         }
     }
-}
-
-private fun DrawScope.coin(c: Offset, r: Float, thick: Float, deg: Float, face: Color, rim: Color) {
-    val a = Math.toRadians(deg.toDouble())
-    val cs = cos(a).toFloat()
-    val half = thick / 2 * sin(a).toFloat()
-    val rx = r * abs(cs)
-    if (abs(half) > 0.01f) {
-        drawOval(rim, Offset(c.x - half - rx, c.y - r), Size(2 * rx, 2 * r))
-        drawOval(rim, Offset(c.x + half - rx, c.y - r), Size(2 * rx, 2 * r))
-        drawRect(rim, Offset(min(c.x - half, c.x + half), c.y - r), Size(abs(2 * half), 2 * r))
-    }
-    val fx = c.x + if (cs >= 0f) half else -half
-    drawOval(face, Offset(fx - rx, c.y - r), Size(2 * rx, 2 * r))
 }
