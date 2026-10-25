@@ -1694,6 +1694,7 @@
 
     <string name="adbfix_save_failed">無法儲存無線偵錯身分</string>
     <string name="adbfix_command_failed">ADB 指令失敗（%1$d）</string>
+    <string name="adbfix_secure_settings_blocked">這台裝置禁止透過 ADB 修改系統設定（小米/HyperOS 常見）。請在開發人員選項開啟「USB 偵錯（安全設定）」後再試。</string>
     <string name="adbfix_not_confirmed">Android 未確認子處理程序限制已變更：%1$s</string>
     <string name="adbfix_no_pairing">尚未儲存任何無線偵錯配對</string>
     <string name="adbfix_enter_address">請輸入目前的無線偵錯 IP 位址和連接埠</string>

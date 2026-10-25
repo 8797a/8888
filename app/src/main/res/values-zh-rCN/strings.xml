@@ -1770,6 +1770,7 @@
 
     <string name="adbfix_save_failed">无法保存无线调试身份信息</string>
     <string name="adbfix_command_failed">ADB 命令执行失败（%1$d）</string>
+    <string name="adbfix_secure_settings_blocked">这台设备禁止通过 ADB 修改系统设置（小米/HyperOS 常见）。请在开发者选项里打开「USB 调试（安全设置）」后再重试。</string>
     <string name="adbfix_not_confirmed">Android 未确认子进程限制已更改：%1$s</string>
     <string name="adbfix_no_pairing">未保存任何无线调试配对</string>
     <string name="adbfix_enter_address">请输入当前的无线调试 IP 地址与端口</string>

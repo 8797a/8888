@@ -167,14 +167,25 @@ object WirelessAdbFix {
 
     fun setChildProcessLimit(context: Context, host: String, port: Int, enabled: Boolean) {
         loadOrCreateIdentity(context.applicationContext)
+        // Xiaomi/HyperOS refuse these writes over ADB until "USB debugging (Security settings)"
+        // is on, and report it as a settings SecurityException with a Java stack trace.
+        val denied = { output: String ->
+            if (output.contains("WRITE_SECURE_SETTINGS") || output.contains("SecurityException"))
+                context.getString(R.string.adbfix_secure_settings_blocked)
+            else null
+        }
         Kadb.create(host, port).use { adb ->
             PhantomProcessLimit.shellCommands(enabled).forEach { command ->
                 val change = adb.shell(command)
-                check(change.exitCode == 0) { change.allOutput.ifBlank { context.getString(R.string.adbfix_command_failed, change.exitCode) } }
+                check(change.exitCode == 0) {
+                    denied(change.allOutput) ?: change.allOutput.ifBlank {
+                        context.getString(R.string.adbfix_command_failed, change.exitCode)
+                    }
+                }
             }
             val result = adb.shell(PhantomProcessLimit.verifyCommand())
             check(result.exitCode == 0 && PhantomProcessLimit.verified(result.output, enabled)) {
-                context.getString(R.string.adbfix_not_confirmed, result.allOutput.trim())
+                denied(result.allOutput) ?: context.getString(R.string.adbfix_not_confirmed, result.allOutput.trim())
             }
         }
         if (PhantomProcessLimit.usesDeviceConfig()) PhantomProcessLimit.rememberAndroid12(context, !enabled)

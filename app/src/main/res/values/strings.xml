@@ -1788,6 +1788,7 @@
 
     <string name="adbfix_save_failed">Could not save Wireless debugging identity</string>
     <string name="adbfix_command_failed">ADB command failed (%1$d)</string>
+    <string name="adbfix_secure_settings_blocked">This device blocks settings changes over ADB. On Xiaomi/HyperOS, turn on "USB debugging (Security settings)" in Developer options, then retry.</string>
     <string name="adbfix_not_confirmed">Android did not confirm the child-process limit was changed: %1$s</string>
     <string name="adbfix_no_pairing">No Wireless debugging pairing is saved</string>
     <string name="adbfix_enter_address">Enter the current Wireless debugging IP address &amp; Port</string>
