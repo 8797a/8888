@@ -895,7 +895,7 @@
     <string name="gate_allow_notifications">允許通知</string>
     <string name="gate_step1">開啟「系統設定」→「開發人員選項」→「無線偵錯」，並將其開啟</string>
     <string name="gate_step2">輕按「使用配對碼配對裝置」</string>
-    <string name="gate_step3">在下方輸入配對碼（也可以在掌匣通知裡輸入）</string>
+    <string name="gate_step3">在掌匣通知中輸入配對碼</string>
     <string name="gate_waiting">正在等待配對彈出式視窗…</string>
     <string name="gate_code_needed">已找到彈出式視窗，請在通知中輸入其中的配對碼。</string>
     <string name="gate_status">狀態</string>

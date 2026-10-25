@@ -45,9 +45,8 @@ class WirelessAdbPairingService : Service() {
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_CODE -> {
-                val typed = RemoteInput.getResultsFromIntent(intent)?.getCharSequence(KEY_CODE)
-                    ?: intent?.getCharSequenceExtra(KEY_CODE)
-                val code = typed?.filter(Char::isDigit)?.toString().orEmpty()
+                val code = RemoteInput.getResultsFromIntent(intent)?.getCharSequence(KEY_CODE)
+                    ?.filter(Char::isDigit)?.toString().orEmpty()
                 onCode(code)
             }
             ACTION_CANCEL -> finish(Stage.Idle)
@@ -259,14 +258,8 @@ class WirelessAdbPairingService : Service() {
             if (Build.VERSION.SDK_INT >= 26) context.startForegroundService(intent) else context.startService(intent)
         }
 
-        /** The app's own field, for phones where the notification's reply action never opens. */
-        fun submitCode(context: Context, code: String) {
-            context.startService(Intent(context, WirelessAdbPairingService::class.java)
-                .setAction(ACTION_CODE)
-                .putExtra(KEY_CODE, code))
-        }
-
-        fun cancel(context: Context) {            if (current.value.let { it is Stage.Done || it is Stage.Failed || it is Stage.Idle }) {
+        fun cancel(context: Context) {
+            if (current.value.let { it is Stage.Done || it is Stage.Failed || it is Stage.Idle }) {
                 publish(Stage.Idle)
                 return
             }

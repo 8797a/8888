@@ -977,7 +977,7 @@
     <string name="gate_allow_notifications">允许通知</string>
     <string name="gate_step1">打开“设置”→“开发者选项”→“无线调试”，并将其开启</string>
     <string name="gate_step2">点按“使用配对码配对设备”</string>
-    <string name="gate_step3">在下方输入配对码（也可以在掌匣通知里输入）</string>
+    <string name="gate_step3">在掌匣通知中输入配对码</string>
     <string name="gate_waiting">正在等待配对弹窗…</string>
     <string name="gate_code_needed">已找到弹窗。请在通知中输入它的配对码。</string>
     <string name="gate_status">状态</string>
